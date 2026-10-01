@@ -103,9 +103,13 @@ tbody tr{transition:background .15s}tbody tr:hover{background:rgba(124,92,255,.0
   function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
   function localDate(offsetDays){var d=new Date();d.setDate(d.getDate()-(offsetDays||0));var m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return d.getFullYear()+'-'+m+'-'+day;}
   var posts=load();
+  var filePosts=[];
+  function view(){return filePosts.concat(posts);}
+  function nz(v){return v==null?null:num(v);}
+  function d(v){return v==null?'—':v;}
   $('date').value=localDate(0);
 
-  function weekPosts(){var cut=localDate(6);return posts.filter(function(p){return p.date>=cut;});}
+  function weekPosts(){var cut=localDate(6);return view().filter(function(p){return p.date>=cut;});}
 
   function reportText(){
     var w=weekPosts();
@@ -132,7 +136,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:rgba(124,92,255,.0
   }
   function renderChart(){
     var c=$('chart');
-    var list=posts.slice().sort(function(a,b){return a.date<b.date?-1:1;}).slice(-7);
+    var list=view().sort(function(a,b){return a.date<b.date?-1:1;}).slice(-7);
     if(!list.length){c.innerHTML='';return;}
     var max=Math.max.apply(null,list.map(rate).concat([1]));
     c.innerHTML=list.map(function(p,i){
@@ -141,7 +145,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:rgba(124,92,255,.0
     }).join('');
   }
   function setMsg(){
-    var n=posts.length,m;
+    var n=view().length,m;
     if(!n)m='ابدأ بإضافة أول منشور 👇';
     else if(n<3)m='بداية رائعة! '+n+' منشور موثّق، واصل 💪';
     else if(n<7)m='🔥 '+n+' منشورات موثقة، أنت تبني عادة حقيقية';
@@ -159,10 +163,10 @@ tbody tr{transition:background .15s}tbody tr:hover{background:rgba(124,92,255,.0
   }
   function render(){
     var tb=$('rows');
-    if(!posts.length){tb.innerHTML="<tr><td colspan='10' class='empty'>لا توجد منشورات بعد. أضف أول منشور.</td></tr>";}
+    if(!view().length){tb.innerHTML="<tr><td colspan='10' class='empty'>لا توجد منشورات بعد. أضف أول منشور.</td></tr>";}
     else{
-      tb.innerHTML=posts.slice().sort(function(a,b){return a.date<b.date?1:-1;}).map(function(p){
-        return '<tr><td>'+esc(p.date)+'</td><td>'+esc(p.title)+'</td><td>'+esc(p.type)+'</td><td>'+p.impressions+'</td><td>'+p.reactions+'</td><td>'+p.comments+'</td><td>'+p.reposts+'</td><td>'+p.videoViews+'</td><td>'+(p.impressions>0?rate(p).toFixed(1)+'%':'-')+"</td><td><button class='del' data-id='"+p.id+"'>حذف</button></td></tr>";
+      tb.innerHTML=view().sort(function(a,b){return a.date<b.date?1:-1;}).map(function(p){
+        return '<tr><td>'+esc(p.date)+'</td><td>'+esc(p.title)+'</td><td>'+esc(p.type)+'</td><td>'+d(p.impressions)+'</td><td>'+d(p.reactions)+'</td><td>'+d(p.comments)+'</td><td>'+d(p.reposts)+'</td><td>'+d(p.videoViews)+'</td><td>'+(p.impressions>0?rate(p).toFixed(1)+'%':'-')+"</td><td>"+(p.src==='file'?'<small>Claude</small>':"<button class='del' data-id='"+p.id+"'>حذف</button>")+'</td></tr>';
       }).join('');
     }
     var w=weekPosts(),imp=0,e=0,vv=0;
@@ -212,6 +216,7 @@ tbody tr{transition:background .15s}tbody tr:hover{background:rgba(124,92,255,.0
     rd.readAsText(f);
   });
   render();
+  try{fetch('posts-data.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():[];}).then(function(arr){if(!Array.isArray(arr))return;filePosts=arr.map(function(p){return {id:'f'+p.id,date:String(p.date||''),title:String(p.title||''),type:String(p.type||''),impressions:nz(p.impressions),reactions:nz(p.reactions),comments:nz(p.comments),reposts:nz(p.reposts),videoViews:nz(p.videoViews),src:'file'};});render();}).catch(function(){});}catch(e){}
 })();
 </script>
 </body>
