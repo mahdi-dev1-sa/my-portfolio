@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang='ar' dir='rtl'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width,initial-scale=1'>
+<meta name='robots' content='noindex'>
+<title>متتبع منشورات LinkedIn</title>
+<style>
+:root{--bg:#07080d;--card:#11131c;--fg:#e8eaf2;--muted:#8b91a7;--accent:#7c5cff;--accent2:#22d3ee;--line:#222638}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,'Segoe UI',Tahoma,sans-serif;line-height:1.6;padding:1.2rem;max-width:900px;margin:0 auto}
+h1{font-size:1.6rem;margin:.6rem 0 .2rem}
+h2{font-size:1.15rem;margin-bottom:.8rem}
+.sub{color:var(--muted);font-size:.9rem;margin-bottom:1.2rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:1.1rem;margin-bottom:1rem}
+.row{display:grid;gap:.7rem;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:.2rem}
+input,select{width:100%;padding:.55rem .7rem;border-radius:10px;border:1px solid var(--line);background:#0b0d14;color:var(--fg);font-size:1rem}
+button{padding:.6rem 1.1rem;border-radius:999px;border:0;background:var(--accent);color:#fff;font-weight:600;font-size:.95rem;cursor:pointer}
+button.alt{background:transparent;border:1px solid var(--accent);color:var(--fg)}
+button.del{background:transparent;color:#ff7a7a;border:1px solid #ff7a7a;padding:.2rem .6rem;font-size:.8rem}
+.actions{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem}
+.stats{display:grid;gap:.7rem;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:.8rem}
+.stat{background:#0b0d14;border:1px solid var(--line);border-radius:12px;padding:.7rem}
+.stat b{display:block;font-size:1.4rem;color:var(--accent2)}
+.stat span{font-size:.8rem;color:var(--muted)}
+.wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.88rem;min-width:620px}
+th,td{padding:.5rem;text-align:right;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:500}
+.empty{color:var(--muted);text-align:center;padding:1rem}
+#best{margin-top:.4rem}
+</style>
+</head>
+<body>
+<h1>متتبع منشورات LinkedIn</h1>
+<p class='sub'>تُحفظ البيانات في متصفحك أنت فقط على هذا الجهاز. استخدم زر التصدير للنسخ الاحتياطي.</p>
+
+<div class='card'>
+  <h2>إضافة منشور</h2>
+  <div class='row'>
+    <div><label>التاريخ</label><input type='date' id='date'></div>
+    <div><label>عنوان المنشور</label><input type='text' id='title' placeholder='مثال: Day 1 portfolio'></div>
+    <div><label>النوع</label><select id='type'>
+      <option>Project Idea</option><option>Build Progress</option><option>What I Learned</option><option>Feature Demo</option><option>Problem &amp; Solution</option><option>Behind the Scenes</option><option>Weekly Progress</option>
+    </select></div>
+  </div>
+  <div class='row' style='margin-top:.7rem'>
+    <div><label>Impressions</label><input type='number' min='0' id='impressions' placeholder='0'></div>
+    <div><label>Reactions</label><input type='number' min='0' id='reactions' placeholder='0'></div>
+    <div><label>Comments</label><input type='number' min='0' id='comments' placeholder='0'></div>
+    <div><label>Reposts</label><input type='number' min='0' id='reposts' placeholder='0'></div>
+    <div><label>Video views</label><input type='number' min='0' id='videoViews' placeholder='0'></div>
+  </div>
+  <div class='actions'><button id='add'>إضافة</button></div>
+</div>
+
+<div class='card'>
+  <h2>تقرير آخر 7 أيام</h2>
+  <div class='stats' id='stats'></div>
+  <p id='best'></p>
+  <div class='actions'><button class='alt' id='copy'>نسخ التقرير</button></div>
+</div>
+
+<div class='card'>
+  <h2>كل المنشورات</h2>
+  <div class='wrap'><table><thead><tr><th>التاريخ</th><th>العنوان</th><th>النوع</th><th>Imp.</th><th>React.</th><th>Comm.</th><th>Rep.</th><th>Video</th><th>نسبة التفاعل</th><th></th></tr></thead><tbody id='rows'></tbody></table></div>
+  <div class='actions'><button class='alt' id='export'>تصدير JSON</button><button class='alt' id='importBtn'>استيراد JSON</button><input type='file' id='importFile' accept='application/json' style='display:none'></div>
+</div>
+
+<script>
+(function(){
+  var KEY='li_tracker_v1';
+  function $(id){return document.getElementById(id);}
+  function load(){try{return JSON.parse(localStorage.getItem(KEY))||[];}catch(e){return [];}}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(posts));}catch(e){alert('تعذر الحفظ في المتصفح');}}
+  function num(v){return Math.max(0,parseInt(v,10)||0);}
+  function eng(p){return p.reactions+p.comments+p.reposts;}
+  function rate(p){return p.impressions>0?eng(p)/p.impressions*100:0;}
+  function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+  function localDate(offsetDays){var d=new Date();d.setDate(d.getDate()-(offsetDays||0));var m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return d.getFullYear()+'-'+m+'-'+day;}
+  var posts=load();
+  $('date').value=localDate(0);
+
+  function weekPosts(){var cut=localDate(6);return posts.filter(function(p){return p.date>=cut;});}
+
+  function reportText(){
+    var w=weekPosts();
+    var imp=0,e=0;w.forEach(function(p){imp+=p.impressions;e+=eng(p);});
+    var r=imp>0?(e/imp*100).toFixed(1)+'%':'-';
+    var best=bestOf(w);
+    var lines=['تقرير آخر 7 أيام','عدد المنشورات: '+w.length,'مجموع Impressions: '+imp,'مجموع التفاعل: '+e,'نسبة التفاعل: '+r];
+    lines.push('أفضل منشور: '+(best?best.title+' ('+best.type+')':'لا توجد بيانات'));
+    return lines.join('\n');
+  }
+  function bestOf(list){
+    if(!list.length)return null;
+    return list.slice().sort(function(a,b){return (rate(b)-rate(a))||(eng(b)-eng(a));})[0];
+  }
+
+  function render(){
+    var tb=$('rows');
+    if(!posts.length){tb.innerHTML="<tr><td colspan='10' class='empty'>لا توجد منشورات بعد. أضف أول منشور.</td></tr>";}
+    else{
+      tb.innerHTML=posts.slice().sort(function(a,b){return a.date<b.date?1:-1;}).map(function(p){
+        return '<tr><td>'+esc(p.date)+'</td><td>'+esc(p.title)+'</td><td>'+esc(p.type)+'</td><td>'+p.impressions+'</td><td>'+p.reactions+'</td><td>'+p.comments+'</td><td>'+p.reposts+'</td><td>'+p.videoViews+'</td><td>'+(p.impressions>0?rate(p).toFixed(1)+'%':'-')+"</td><td><button class='del' data-id='"+p.id+"'>حذف</button></td></tr>";
+      }).join('');
+    }
+    var w=weekPosts(),imp=0,e=0,vv=0;
+    w.forEach(function(p){imp+=p.impressions;e+=eng(p);vv+=p.videoViews;});
+    var r=imp>0?(e/imp*100).toFixed(1)+'%':'-';
+    function stat(n,l){return "<div class='stat'><b>"+n+'</b><span>'+l+'</span></div>';}
+    $('stats').innerHTML=stat(w.length,'منشورات')+stat(imp,'Impressions')+stat(e,'تفاعل')+stat(r,'نسبة التفاعل')+stat(vv,'مشاهدات الفيديو');
+    var b=bestOf(w);
+    $('best').textContent=b?('أفضل منشور هذا الأسبوع: '+b.title+' ('+b.type+')'):'لا توجد منشورات في آخر 7 أيام.';
+  }
+
+  $('add').addEventListener('click',function(){
+    var title=$('title').value.trim();
+    if(!title){alert('اكتب عنوان المنشور');return;}
+    posts.push({id:Date.now(),date:$('date').value||localDate(0),title:title,type:$('type').value,impressions:num($('impressions').value),reactions:num($('reactions').value),comments:num($('comments').value),reposts:num($('reposts').value),videoViews:num($('videoViews').value)});
+    save();
+    ['title','impressions','reactions','comments','reposts','videoViews'].forEach(function(id){$(id).value='';});
+    render();
+  });
+  $('rows').addEventListener('click',function(ev){
+    var id=ev.target.getAttribute('data-id');
+    if(!id)return;
+    if(confirm('حذف هذا المنشور؟')){posts=posts.filter(function(p){return String(p.id)!==id;});save();render();}
+  });
+  $('copy').addEventListener('click',function(){
+    var t=reportText();
+    if(navigator.clipboard){navigator.clipboard.writeText(t).then(function(){alert('تم النسخ');},function(){prompt('انسخ التقرير:',t);});}
+    else{prompt('انسخ التقرير:',t);}
+  });
+  $('export').addEventListener('click',function(){
+    var blob=new Blob([JSON.stringify(posts,null,2)],{type:'application/json'});
+    var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='linkedin-tracker-backup.json';a.click();
+  });
+  $('importBtn').addEventListener('click',function(){$('importFile').click();});
+  $('importFile').addEventListener('change',function(ev){
+    var f=ev.target.files[0];if(!f)return;
+    var rd=new FileReader();
+    rd.onload=function(){
+      try{
+        var data=JSON.parse(rd.result);
+        if(!Array.isArray(data))throw new Error('bad');
+        posts=data.map(function(p){return {id:p.id||Date.now()+Math.random(),date:String(p.date||localDate(0)),title:String(p.title||''),type:String(p.type||''),impressions:num(p.impressions),reactions:num(p.reactions),comments:num(p.comments),reposts:num(p.reposts),videoViews:num(p.videoViews)};});
+        save();render();
+      }catch(e){alert('ملف غير صالح');}
+    };
+    rd.readAsText(f);
+  });
+  render();
+})();
+</script>
+</body>
+</html>
