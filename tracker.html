@@ -30,11 +30,33 @@ th,td{padding:.5rem;text-align:right;border-bottom:1px solid var(--line)}
 th{color:var(--muted);font-weight:500}
 .empty{color:var(--muted);text-align:center;padding:1rem}
 #best{margin-top:.4rem}
+.bg{position:fixed;inset:-20%;z-index:-1;background:radial-gradient(40% 40% at 20% 20%,rgba(124,92,255,.28),transparent 70%),radial-gradient(35% 35% at 80% 30%,rgba(34,211,238,.18),transparent 70%),radial-gradient(40% 40% at 50% 90%,rgba(124,92,255,.18),transparent 70%);animation:drift 16s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translate3d(4%,3%,0) scale(1.08)}}
+.g{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.card{animation:rise .6s both}
+.card:nth-of-type(3){animation-delay:.1s}.card:nth-of-type(4){animation-delay:.2s}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}}
+.stat{transition:transform .2s,border-color .2s}.stat:hover{transform:translateY(-3px);border-color:var(--accent)}
+button{transition:transform .15s,box-shadow .2s}button:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(124,92,255,.45)}button:active{transform:scale(.97)}
+tbody tr{transition:background .15s}tbody tr:hover{background:rgba(124,92,255,.08)}
+.msg{margin-bottom:1rem;padding:.6rem .9rem;border-radius:12px;background:rgba(124,92,255,.14);border:1px solid rgba(124,92,255,.35)}
+.chart{display:flex;align-items:flex-end;gap:.5rem;height:150px;margin:.6rem 0 1rem}
+.bar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}
+.bar i{display:block;width:100%;max-width:46px;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,var(--accent2),var(--accent));transform-origin:bottom;animation:grow .7s cubic-bezier(.2,.8,.2,1) both;min-height:4px}
+@keyframes grow{from{transform:scaleY(0)}}
+.bar small{font-size:.7rem;color:var(--accent2);margin-top:.2rem}
+.bar em{font-size:.62rem;color:var(--muted);font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.cf{position:fixed;top:-2rem;font-size:1.6rem;z-index:50;pointer-events:none;animation:fall 1.6s ease-in forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(360deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
-<h1>متتبع منشورات LinkedIn</h1>
+<div class='bg'></div>
+<h1>🚀 <span class='g'>متتبع منشورات</span> LinkedIn</h1>
 <p class='sub'>تُحفظ البيانات في متصفحك أنت فقط على هذا الجهاز. استخدم زر التصدير للنسخ الاحتياطي.</p>
+
+<p id='msg' class='msg'></p>
 
 <div class='card'>
   <h2>إضافة منشور</h2>
@@ -59,6 +81,7 @@ th{color:var(--muted);font-weight:500}
   <h2>تقرير آخر 7 أيام</h2>
   <div class='stats' id='stats'></div>
   <p id='best'></p>
+  <div id='chart' class='chart'></div>
   <div class='actions'><button class='alt' id='copy'>نسخ التقرير</button></div>
 </div>
 
@@ -98,6 +121,42 @@ th{color:var(--muted);font-weight:500}
     return list.slice().sort(function(a,b){return (rate(b)-rate(a))||(eng(b)-eng(a));})[0];
   }
 
+  var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function countUp(){
+    if(reduce)return;
+    document.querySelectorAll('.stat b[data-to]').forEach(function(el){
+      var raw=el.getAttribute('data-to'),to=parseFloat(raw),suf=el.getAttribute('data-suf')||'',dec=(raw.split('.')[1]||'').length,t0=null;
+      function step(ts){if(!t0)t0=ts;var k=Math.min(1,(ts-t0)/700),e=1-Math.pow(1-k,3);el.textContent=(to*e).toFixed(dec)+suf;if(k<1)requestAnimationFrame(step);}
+      requestAnimationFrame(step);
+    });
+  }
+  function renderChart(){
+    var c=$('chart');
+    var list=posts.slice().sort(function(a,b){return a.date<b.date?-1:1;}).slice(-7);
+    if(!list.length){c.innerHTML='';return;}
+    var max=Math.max.apply(null,list.map(rate).concat([1]));
+    c.innerHTML=list.map(function(p,i){
+      var h=Math.max(4,rate(p)/max*80);
+      return "<div class='bar'><i style='height:"+h+"%;animation-delay:"+(i*80)+"ms'></i><small>"+(p.impressions>0?rate(p).toFixed(1)+'%':'-')+'</small><em>'+esc(p.title.slice(0,10))+'</em></div>';
+    }).join('');
+  }
+  function setMsg(){
+    var n=posts.length,m;
+    if(!n)m='ابدأ بإضافة أول منشور 👇';
+    else if(n<3)m='بداية رائعة! '+n+' منشور موثّق، واصل 💪';
+    else if(n<7)m='🔥 '+n+' منشورات موثقة، أنت تبني عادة حقيقية';
+    else m='🚀 '+n+' منشورات! رحلتك صارت موثقة';
+    $('msg').textContent=m;
+  }
+  function confetti(){
+    if(reduce)return;
+    var em=['🎉','✨','🚀','🔥','💜'];
+    for(var i=0;i<18;i++){
+      var s=document.createElement('span');s.className='cf';s.textContent=em[i%em.length];
+      s.style.left=(10+Math.random()*80)+'vw';s.style.animationDelay=(Math.random()*200)+'ms';
+      document.body.appendChild(s);setTimeout(s.remove.bind(s),1900);
+    }
+  }
   function render(){
     var tb=$('rows');
     if(!posts.length){tb.innerHTML="<tr><td colspan='10' class='empty'>لا توجد منشورات بعد. أضف أول منشور.</td></tr>";}
@@ -109,8 +168,9 @@ th{color:var(--muted);font-weight:500}
     var w=weekPosts(),imp=0,e=0,vv=0;
     w.forEach(function(p){imp+=p.impressions;e+=eng(p);vv+=p.videoViews;});
     var r=imp>0?(e/imp*100).toFixed(1)+'%':'-';
-    function stat(n,l){return "<div class='stat'><b>"+n+'</b><span>'+l+'</span></div>';}
+    function stat(n,l){var t=String(n),m=t.match(/^([0-9.]+)(%?)$/);var a=m?" data-to='"+m[1]+"' data-suf='"+m[2]+"'":'';return "<div class='stat'><b"+a+'>'+t+'</b><span>'+l+'</span></div>';}
     $('stats').innerHTML=stat(w.length,'منشورات')+stat(imp,'Impressions')+stat(e,'تفاعل')+stat(r,'نسبة التفاعل')+stat(vv,'مشاهدات الفيديو');
+    countUp();renderChart();setMsg();
     var b=bestOf(w);
     $('best').textContent=b?('أفضل منشور هذا الأسبوع: '+b.title+' ('+b.type+')'):'لا توجد منشورات في آخر 7 أيام.';
   }
@@ -121,7 +181,7 @@ th{color:var(--muted);font-weight:500}
     posts.push({id:Date.now(),date:$('date').value||localDate(0),title:title,type:$('type').value,impressions:num($('impressions').value),reactions:num($('reactions').value),comments:num($('comments').value),reposts:num($('reposts').value),videoViews:num($('videoViews').value)});
     save();
     ['title','impressions','reactions','comments','reposts','videoViews'].forEach(function(id){$(id).value='';});
-    render();
+    render();confetti();
   });
   $('rows').addEventListener('click',function(ev){
     var id=ev.target.getAttribute('data-id');
