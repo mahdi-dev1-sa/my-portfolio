@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width,initial-scale=1'>
+<meta name='robots' content='noindex'>
+<title>Mahdi Dev &mdash; before mobile fix</title>
+<style>
+:root{--bg:#07080d;--fg:#e8eaf2;--muted:#8b91a7;--accent:#7c5cff;--accent2:#22d3ee}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,'Segoe UI',sans-serif;line-height:1.6}
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+main{position:relative;z-index:1}
+section{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:6rem 8vw;max-width:1100px}
+h1{font-size:clamp(2.6rem,8vw,5.5rem);line-height:1.05;letter-spacing:-.03em}
+h1 span{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+h2{font-size:clamp(1.6rem,4vw,2.4rem);margin-bottom:1.5rem}
+p.lead{color:var(--muted);font-size:1.15rem;max-width:42ch;margin-top:1.2rem}
+.grid{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:1.4rem;backdrop-filter:blur(8px);transition:transform .25s,border-color .25s}
+.card:hover{transform:translateY(-6px);border-color:var(--accent)}
+.card h3{margin-bottom:.4rem}
+.card p{color:var(--muted);font-size:.95rem}
+.tag{display:inline-block;font-size:.75rem;color:var(--accent2);margin-bottom:.6rem;letter-spacing:.08em;text-transform:uppercase}
+a.btn{display:inline-block;margin-top:2rem;padding:.8rem 1.4rem;border-radius:999px;background:var(--accent);color:#fff;text-decoration:none;font-weight:600}
+a.btn.alt{background:transparent;border:1px solid var(--accent);margin-left:.6rem}
+footer{position:relative;z-index:1;text-align:center;color:var(--muted);padding:2rem;font-size:.85rem}
+</style>
+</head>
+<body>
+<canvas id='bg'></canvas>
+<main>
+  <section id='hero'>
+    <span class='tag'>Freelance &middot; Web &middot; Apps &middot; Video</span>
+    <h1>Hi, I'm <span>Mahdi Dev</span></h1>
+    <p class='lead'>I build web and app projects, edit video, and I'm learning game development. I document every build in public.</p>
+    <div><a class='btn' href='#projects'>See what I'm building</a><a class='btn alt' href='https://github.com/mahdi-dev1-sa' target='_blank' rel='noopener'>GitHub</a></div>
+  </section>
+  <section id='skills'>
+    <h2>What I do</h2>
+    <div class='grid'>
+      <div class='card'><span class='tag'>Web</span><h3>Web Development</h3><p>Websites and web apps built from scratch.</p></div>
+      <div class='card'><span class='tag'>Apps</span><h3>App Development</h3><p>Practical applications that solve real problems.</p></div>
+      <div class='card'><span class='tag'>Video</span><h3>Video Design &amp; Editing</h3><p>Video editing and visual design for content.</p></div>
+      <div class='card'><span class='tag'>Learning</span><h3>Game Development</h3><p>Currently learning, with projects coming.</p></div>
+    </div>
+  </section>
+  <section id='projects'>
+    <h2>Projects</h2>
+    <div class='grid'>
+      <div class='card'><span class='tag'>Project 01</span><h3>This portfolio</h3><p>A 3D portfolio built with HTML, CSS, JavaScript and Three.js, hosted on GitHub Pages.</p></div>
+      <div class='card'><span class='tag'>Next</span><h3>More soon</h3><p>New projects will be added here as I finish them.</p></div>
+    </div>
+  </section>
+  <section id='contact'>
+    <h2>Let's talk</h2>
+    <p class='lead'>Open to freelance work. Contact links will be added here.</p>
+    <div><a class='btn' href='https://github.com/mahdi-dev1-sa' target='_blank' rel='noopener'>View my GitHub</a></div>
+  </section>
+</main>
+<footer>&copy; 2026 Mahdi Dev</footer>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'></script>
+<script>
+(function(){
+  var canvas=document.getElementById('bg');
+  var renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  var scene=new THREE.Scene();
+  var camera=new THREE.PerspectiveCamera(60,1,0.1,100);
+  camera.position.z=6;
+  var knot=new THREE.Mesh(
+    new THREE.TorusKnotGeometry(1.6,0.45,160,20),
+    new THREE.MeshBasicMaterial({color:0x7c5cff,wireframe:true,transparent:true,opacity:0.45})
+  );
+  scene.add(knot);
+  var count=1500,pos=new Float32Array(count*3);
+  for(var i=0;i<pos.length;i++){pos[i]=(Math.random()-0.5)*40;}
+  var sg=new THREE.BufferGeometry();
+  sg.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  var stars=new THREE.Points(sg,new THREE.PointsMaterial({color:0x22d3ee,size:0.05,transparent:true,opacity:0.8}));
+  scene.add(stars);
+  var mx=0,my=0,reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.addEventListener('mousemove',function(e){mx=e.clientX/innerWidth-0.5;my=e.clientY/innerHeight-0.5;});
+  function resize(){
+    var w=window.innerWidth,h=window.innerHeight;
+    renderer.setSize(w,h,false);
+    camera.aspect=w/h;camera.updateProjectionMatrix();
+    knot.position.x=w<700?0:2.4;
+  }
+  window.addEventListener('resize',resize);resize();
+  function frame(t){
+    var scroll=window.scrollY/Math.max(1,document.body.scrollHeight-innerHeight);
+    if(!reduce){knot.rotation.x=t*0.0002;knot.rotation.y=t*0.0003;stars.rotation.y=t*0.00004;}
+    knot.rotation.z=scroll*Math.PI*2;
+    knot.position.y=-scroll*2;
+    camera.position.x+=(mx*1.2-camera.position.x)*0.05;
+    camera.position.y+=(-my*1.2-camera.position.y)*0.05;
+    camera.lookAt(0,0,0);
+    renderer.render(scene,camera);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
