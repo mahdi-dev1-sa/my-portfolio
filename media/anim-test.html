@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>anim test</title>
+<style>
+*{margin:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#0b0b14;font-family:system-ui,Segoe UI,Roboto,sans-serif;color:#eceaff}
+.bg{position:fixed;inset:-20%;background:radial-gradient(600px 400px at 30% 30%,rgba(124,92,255,.5),transparent),radial-gradient(500px 400px at 80% 70%,rgba(53,208,255,.35),transparent);animation:drift 8s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translate(8%,6%) scale(1.15)}}
+.s{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;opacity:0}
+h1{font-size:96px;font-weight:800;line-height:1.1}
+h1 em{font-style:normal;color:#7c5cff}
+p{font-size:34px;color:#9a98c0;margin-top:18px}
+.a{animation:sh 2.4s ease both .3s}.b{animation:sh 2.4s ease both 2.7s}.c{animation:sh 2.4s ease both 5.1s}
+@keyframes sh{0%{opacity:0;transform:translateY(40px) scale(.96)}18%,82%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-30px)}}
+</style></head><body><div class="bg"></div>
+<div class="s a"><h1>I build <em>websites</em></h1><p>mobile-first, fast, clean</p></div>
+<div class="s b"><h1>and <em>web apps</em></h1><p>from idea to live link</p></div>
+<div class="s c"><h1>Mahdi<em>.dev</em></h1><p>Available for new projects</p></div>
+</body></html>
