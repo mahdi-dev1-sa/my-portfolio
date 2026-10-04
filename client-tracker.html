@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Client Tracker — Mahdi Dev</title>
+<style>
+:root{--bg:#0b0b14;--card:#14142a;--line:#26264a;--txt:#eceaff;--mut:#9a98c0;--acc:#7c5cff;--acc2:#35d0ff;--ok:#3ddc97;--warn:#ffb84d}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5;padding-bottom:40px}
+.wrap{max-width:1100px;margin:0 auto;padding:0 16px}
+header{padding:28px 0 8px}
+h1{font-size:28px}h1 span{color:var(--acc)}
+.sub{color:var(--mut);font-size:14px;margin-top:4px}
+.demo{display:none;background:rgba(255,184,77,.12);border:1px solid var(--warn);color:var(--warn);padding:8px 12px;border-radius:10px;margin-top:12px;font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+.stat b{display:block;font-size:26px}.stat small{color:var(--mut)}
+form{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:16px}
+input,select,textarea{background:#0e0e1f;border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:10px;font:inherit;width:100%}
+textarea{grid-column:1/-1;resize:vertical;min-height:44px}
+button{cursor:pointer;border:0;border-radius:8px;padding:10px 14px;font:inherit;font-weight:600;color:#fff;background:linear-gradient(90deg,var(--acc),#5a7bff)}
+button.g{background:none;border:1px solid var(--line);color:var(--mut);font-weight:500;padding:6px 10px;font-size:13px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.bar input{flex:1;min-width:160px}
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:start}
+.col{background:rgba(20,20,42,.5);border:1px solid var(--line);border-radius:14px;padding:10px;min-height:120px}
+.col h3{font-size:14px;color:var(--mut);margin:4px 4px 10px;display:flex;justify-content:space-between}
+.item{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+.item h4{font-size:15px}.item .p{color:var(--acc2);font-size:13px}
+.item .m{color:var(--mut);font-size:12px;margin-top:4px;word-break:break-word}
+.item .late{color:var(--warn)}
+.act{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.empty{color:var(--mut);font-size:13px;text-align:center;padding:14px}
+@media(max-width:900px){.board{grid-template-columns:1fr 1fr}.stats{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.board{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<h1>Client <span>Tracker</span></h1>
+<p class="sub">Track leads, active projects, deliveries and payments. Your data stays in your browser.</p>
+<div class="demo" id="demo">Demo mode: the entries below are sample data for a screenshot, not real clients.</div>
+</header>
+
+<div class="stats">
+<div class="stat"><b id="s0">0</b><small>Leads</small></div>
+<div class="stat"><b id="s1">0</b><small>In progress</small></div>
+<div class="stat"><b id="s2">0</b><small>Delivered</small></div>
+<div class="stat"><b id="s3">0</b><small>Paid</small></div>
+</div>
+
+<form id="f">
+<input id="name" placeholder="Client name" required maxlength="60">
+<input id="proj" placeholder="Project" required maxlength="80">
+<input id="due" type="date" title="Deadline">
+<select id="st"><option value="0">Lead</option><option value="1">In progress</option><option value="2">Delivered</option><option value="3">Paid</option></select>
+<textarea id="note" placeholder="Notes (optional)" maxlength="300"></textarea>
+<button id="sub" type="submit">Add client</button>
+</form>
+
+<div class="bar">
+<input id="q" placeholder="Search client or project">
+<button class="g" id="exp" type="button">Export JSON</button>
+<button class="g" id="clr" type="button">Clear all</button>
+</div>
+
+<div class="board" id="board"></div>
+</div>
+
+<script>
+function $(i){return document.getElementById(i)}
+var KEY='client-tracker-v1',COLS=['Lead','In progress','Delivered','Paid'];
+var params=new URLSearchParams(location.search),DEMO=params.get('demo')==='1';
+var data=[],editing=null;
+function load(){
+  if(DEMO){document.getElementById('demo').style.display='block';
+    data=[
+      {id:1,name:'Sample client A',proj:'Landing page',due:'2026-10-20',st:0,note:'Sample entry'},
+      {id:2,name:'Sample client B',proj:'Portfolio site',due:'2026-10-12',st:1,note:'Sample entry'},
+      {id:3,name:'Sample client C',proj:'Promo video edit',due:'2026-10-08',st:1,note:'Sample entry'},
+      {id:4,name:'Sample client D',proj:'Small web app',due:'2026-10-03',st:2,note:'Sample entry'},
+      {id:5,name:'Sample client E',proj:'Logo animation',due:'',st:3,note:'Sample entry'}];
+    return;}
+  try{data=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){data=[]}
+  if(!Array.isArray(data))data=[];
+}
+function save(){if(DEMO)return;try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}}
+function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
+function render(){
+  var q=document.getElementById('q').value.trim().toLowerCase(),b=document.getElementById('board');
+  b.textContent='';
+  var today=new Date().toISOString().slice(0,10);
+  for(var c=0;c<4;c++){
+    var n=data.filter(function(d){return d.st===c}).length;
+    document.getElementById('s'+c).textContent=n;
+    var col=el('div','col'),h=el('h3');h.appendChild(el('span','',COLS[c]));h.appendChild(el('span','',String(n)));col.appendChild(h);
+    var items=data.filter(function(d){return d.st===c&&(!q||(d.name+' '+d.proj).toLowerCase().indexOf(q)>-1)});
+    if(!items.length)col.appendChild(el('div','empty','Nothing here'));
+    items.forEach(function(d){
+      var it=el('div','item');
+      it.appendChild(el('h4','',d.name));it.appendChild(el('div','p',d.proj));
+      if(d.due){var late=d.st<2&&d.due<today;it.appendChild(el('div','m'+(late?' late':''),'Deadline: '+d.due+(late?' (overdue)':'')))}
+      if(d.note)it.appendChild(el('div','m',d.note));
+      var a=el('div','act');
+      if(d.st>0)a.appendChild(btn('←',function(){move(d.id,-1)}));
+      if(d.st<3)a.appendChild(btn('→',function(){move(d.id,1)}));
+      a.appendChild(btn('Edit',function(){edit(d.id)}));
+      a.appendChild(btn('Delete',function(){del(d.id)}));
+      it.appendChild(a);col.appendChild(it);
+    });
+    b.appendChild(col);
+  }
+}
+function btn(t,fn){var b=el('button','g',t);b.type='button';b.onclick=fn;return b}
+function find(id){for(var i=0;i<data.length;i++)if(data[i].id===id)return data[i]}
+function move(id,d){var x=find(id);x.st+=d;save();render()}
+function del(id){if(!confirm('Delete this client?'))return;data=data.filter(function(d){return d.id!==id});save();render()}
+function edit(id){var x=find(id);editing=id;
+  $('name').value=x.name;$('proj').value=x.proj;$('due').value=x.due||'';$('st').value=x.st;$('note').value=x.note||'';
+  document.getElementById('sub').textContent='Save changes';window.scrollTo({top:0,behavior:'smooth'})}
+document.getElementById('f').onsubmit=function(e){
+  e.preventDefault();
+  var o={name:$('name').value.trim(),proj:$('proj').value.trim(),due:$('due').value,st:+$('st').value,note:$('note').value.trim()};
+  if(!o.name||!o.proj)return;
+  if(editing){var x=find(editing);for(var k in o)x[k]=o[k];editing=null;document.getElementById('sub').textContent='Add client'}
+  else{o.id=Date.now();data.push(o)}
+  this.reset();save();render();
+};
+document.getElementById('q').oninput=render;
+document.getElementById('clr').onclick=function(){if(!data.length||!confirm('Delete ALL clients?'))return;data=[];save();render()};
+document.getElementById('exp').onclick=function(){
+  var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));a.download='clients.json';a.click()};
+load();render();
+</script>
+</body>
+</html>
