@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Grammar Helper — Mahdi Dev</title>
+<style>
+:root{--bg:#0b0b14;--card:#14142a;--line:#26264a;--txt:#eceaff;--mut:#9a98c0;--acc:#7c5cff;--acc2:#35d0ff;--bad:#ff6b8a;--ok:#3ddc97}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.55;padding-bottom:40px}
+.wrap{max-width:860px;margin:0 auto;padding:0 16px}
+header{padding:28px 0 10px}
+h1{font-size:28px}h1 span{color:var(--acc)}
+.sub{color:var(--mut);font-size:14px;margin-top:4px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:14px}
+textarea{width:100%;min-height:170px;background:#0e0e1f;border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:12px;font:inherit;resize:vertical}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+select{background:#0e0e1f;border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:9px;font:inherit}
+button{cursor:pointer;border:0;border-radius:8px;padding:10px 16px;font:inherit;font-weight:700;color:#fff;background:linear-gradient(90deg,var(--acc),#5a7bff)}
+button:disabled{opacity:.5;cursor:wait}
+button.g{background:none;border:1px solid var(--line);color:var(--mut);font-weight:500;padding:7px 11px;font-size:13px}
+.cnt{margin-left:auto;color:var(--mut);font-size:13px}
+.stats{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+.pill{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:14px}
+.pill b{color:var(--acc2)}
+#out{white-space:pre-wrap;word-break:break-word}
+mark{background:rgba(255,107,138,.22);border-bottom:2px solid var(--bad);color:inherit;border-radius:3px;padding:0 1px}
+.issue{border-top:1px solid var(--line);padding:12px 0}
+.issue:first-child{border-top:0}
+.issue .w{color:var(--bad);font-weight:700}
+.issue .m{color:var(--mut);font-size:14px;margin:2px 0 8px}
+.sg{display:flex;gap:6px;flex-wrap:wrap}
+.msg{color:var(--mut);font-size:14px;padding:6px 0}
+.err{color:var(--bad)}.ok{color:var(--ok)}
+.note{color:var(--mut);font-size:12px;margin-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<h1>Grammar <span>Helper</span></h1>
+<p class="sub">Paste English text, find grammar and spelling mistakes, and fix them with one click.</p>
+</header>
+
+<div class="box">
+<textarea id="t" maxlength="5000" placeholder="Type or paste your text here..."></textarea>
+<div class="row">
+<select id="lang"><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option></select>
+<button id="go">Check text</button>
+<button class="g" id="all" type="button">Apply all fixes</button>
+<button class="g" id="clr" type="button">Clear</button>
+<span class="cnt" id="cnt">0 / 5000</span>
+</div>
+</div>
+
+<div class="stats"><div class="pill">Issues: <b id="n">0</b></div><div class="pill">Words: <b id="wc">0</b></div></div>
+
+<div class="box" id="res" style="display:none">
+<div id="out"></div>
+<div id="list" style="margin-top:12px"></div>
+</div>
+
+<p class="note">Checking is done by the LanguageTool public API: your text is sent to api.languagetool.org when you press Check. Suggestions are not always right, so read each one before applying it.</p>
+</div>
+
+<script>
+function $(i){return document.getElementById(i)}
+var t=$('t'),matches=[],busy=false;
+function counts(){$('cnt').textContent=t.value.length+' / 5000';var w=t.value.trim().split(/\s+/).filter(Boolean).length;$('wc').textContent=w}
+t.addEventListener('input',counts);
+function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!==undefined)e.textContent=txt;return e}
+function note(msg,cls){$('res').style.display='block';$('out').textContent='';$('list').textContent='';$('list').appendChild(el('div','msg '+(cls||''),msg));$('n').textContent='0'}
+function check(){
+  var text=t.value;
+  if(!text.trim()){note('Write some text first.','err');return}
+  if(busy)return;busy=true;$('go').disabled=true;$('go').textContent='Checking...';
+  var body=new URLSearchParams();body.set('text',text);body.set('language',$('lang').value);
+  fetch('https://api.languagetool.org/v2/check',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Accept':'application/json'},body:body})
+  .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()})
+  .then(function(j){matches=(j.matches||[]).filter(function(m){return m.replacements&&m.replacements.length||m.message});render(text)})
+  .catch(function(e){note('Could not check the text ('+e.message+'). The free service may be busy or blocked. Try again in a minute.','err')})
+  .finally(function(){busy=false;$('go').disabled=false;$('go').textContent='Check text'});
+}
+function render(text){
+  $('res').style.display='block';$('n').textContent=matches.length;
+  var out=$('out'),list=$('list');out.textContent='';list.textContent='';
+  if(!matches.length){list.appendChild(el('div','msg ok','No issues found. Nice work!'));out.textContent=text;return}
+  var pos=0;
+  matches.forEach(function(m){
+    if(m.offset>pos)out.appendChild(document.createTextNode(text.slice(pos,m.offset)));
+    out.appendChild(el('mark','',text.slice(m.offset,m.offset+m.length)));pos=m.offset+m.length;
+  });
+  out.appendChild(document.createTextNode(text.slice(pos)));
+  matches.forEach(function(m){
+    var d=el('div','issue');
+    d.appendChild(el('div','w','"'+text.slice(m.offset,m.offset+m.length)+'"'));
+    d.appendChild(el('div','m',m.message));
+    var s=el('div','sg');
+    (m.replacements||[]).slice(0,4).forEach(function(r){
+      var b=el('button','g',r.value===''?'(remove)':r.value);b.type='button';
+      b.onclick=function(){apply(m,r.value)};s.appendChild(b);
+    });
+    d.appendChild(s);list.appendChild(d);
+  });
+}
+function apply(m,val){
+  var x=t.value;t.value=x.slice(0,m.offset)+val+x.slice(m.offset+m.length);counts();check();
+}
+$('go').onclick=check;
+$('all').onclick=function(){
+  if(!matches.length)return;
+  var x=t.value,ms=matches.filter(function(m){return m.replacements&&m.replacements.length}).sort(function(a,b){return b.offset-a.offset});
+  ms.forEach(function(m){x=x.slice(0,m.offset)+m.replacements[0].value+x.slice(m.offset+m.length)});
+  t.value=x;counts();check();
+};
+$('clr').onclick=function(){t.value='';matches=[];counts();$('res').style.display='none';$('n').textContent='0'};
+var q=new URLSearchParams(location.search);
+if(q.get('sample')==='1'){t.value='I has a apple and she go to school every days. Their is many reasons why I want to improve my english.';counts();check()}
+counts();
+</script>
+</body>
+</html>
