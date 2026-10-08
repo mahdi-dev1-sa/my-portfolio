@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Number Guessing Game — Mahdi Dev</title>
+<style>
+:root{--bg:#0b0b14;--card:#14142a;--line:#26264a;--txt:#eceaff;--mut:#9a98c0;--acc:#7c5cff;--acc2:#35d0ff;--bad:#ff6b8a;--ok:#3ddc97;--warn:#ffb84d}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5;min-height:100vh;display:flex;justify-content:center;padding:20px 16px 40px}
+.app{width:100%;max-width:460px}
+h1{font-size:28px;text-align:center}h1 span{color:var(--acc)}
+.sub{color:var(--mut);text-align:center;font-size:14px;margin:4px 0 16px}
+.demo{display:none;background:rgba(255,184,77,.12);border:1px solid var(--warn);color:var(--warn);padding:7px 12px;border-radius:10px;margin-bottom:12px;font-size:12px;text-align:center}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+.lv{display:flex;gap:8px;margin-bottom:14px}
+.lv button{flex:1;background:none;border:1px solid var(--line);color:var(--mut);border-radius:10px;padding:8px 4px;font:inherit;font-size:13px;cursor:pointer}
+.lv button.on{border-color:var(--acc);color:var(--txt);background:rgba(124,92,255,.15)}
+.range{text-align:center;color:var(--mut);font-size:14px}
+.range b{color:var(--acc2)}
+.msg{text-align:center;font-size:22px;font-weight:700;min-height:34px;margin:14px 0 6px}
+.msg.hi,.msg.lo{color:var(--warn)}.msg.win{color:var(--ok)}.msg.lose{color:var(--bad)}
+.heat{text-align:center;color:var(--mut);font-size:14px;min-height:22px}
+.dots{display:flex;gap:6px;justify-content:center;margin:12px 0}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--line)}
+.dot.used{background:var(--acc)}
+.row{display:flex;gap:10px;margin-top:6px}
+input{flex:1;min-width:0;background:#0e0e1f;border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:12px;font:inherit;font-size:18px;text-align:center}
+button.go{background:linear-gradient(90deg,var(--acc),#5a7bff);border:0;color:#fff;border-radius:10px;padding:12px 20px;font:inherit;font-weight:700;cursor:pointer}
+button:disabled,input:disabled{opacity:.5;cursor:not-allowed}
+.hist{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;min-height:30px}
+.chip{border:1px solid var(--line);border-radius:999px;padding:3px 11px;font-size:14px}
+.chip.hi{border-color:var(--warn);color:var(--warn)}.chip.lo{border-color:var(--acc2);color:var(--acc2)}.chip.ok{border-color:var(--ok);color:var(--ok)}
+.foot{display:flex;justify-content:space-between;align-items:center;margin-top:16px;color:var(--mut);font-size:14px}
+.again{display:none;width:100%;margin-top:14px;background:none;border:1px solid var(--acc);color:var(--txt);border-radius:10px;padding:11px;font:inherit;font-weight:600;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>Number <span>Guess</span></h1>
+<p class="sub">I'm thinking of a number. Can you find it before you run out of tries?</p>
+<div class="demo" id="demo">Demo mode: a pre-played sample round for the screenshot.</div>
+<div class="card">
+<div class="lv" id="lv"></div>
+<div class="range" id="range"></div>
+<div class="msg" id="msg">Make your first guess</div>
+<div class="heat" id="heat"></div>
+<div class="dots" id="dots"></div>
+<div class="row"><input id="in" type="number" inputmode="numeric" placeholder="Your guess"><button class="go" id="go">Guess</button></div>
+<div class="hist" id="hist"></div>
+<button class="again" id="again">Play again</button>
+<div class="foot"><span id="tries"></span><span id="best"></span></div>
+</div>
+</div>
+<script>
+function $(i){return document.getElementById(i)}
+var LEVELS=[{n:'Easy',max:50,tries:8},{n:'Normal',max:100,tries:7},{n:'Hard',max:500,tries:9}];
+var DEMO=new URLSearchParams(location.search).get('demo')==='1';
+var lvl=1,target=0,left=0,over=false,hist=[];
+function bestKey(){return 'numguess-best-'+LEVELS[lvl].n}
+function getBest(){if(DEMO)return null;try{var v=localStorage.getItem(bestKey());return v?+v:null}catch(e){return null}}
+function setBest(v){if(DEMO)return;try{localStorage.setItem(bestKey(),String(v))}catch(e){}}
+function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
+function buildLevels(){
+  var box=$('lv');box.textContent='';
+  LEVELS.forEach(function(L,i){
+    var b=el('button',i===lvl?'on':'',L.n+' (1-'+L.max+')');b.type='button';
+    b.onclick=function(){lvl=i;start()};box.appendChild(b);
+  });
+}
+function rnd(max){return 1+Math.floor(Math.random()*max)}
+function start(){
+  var L=LEVELS[lvl];target=DEMO?42:rnd(L.max);left=L.tries;over=false;hist=[];
+  buildLevels();
+  $('range').textContent='';$('range').appendChild(document.createTextNode('Pick a number from '));
+  var b=el('b','','1 to '+L.max);$('range').appendChild(b);
+  $('in').disabled=false;$('go').disabled=false;$('in').value='';$('in').min=1;$('in').max=L.max;
+  $('again').style.display='none';
+  say('Make your first guess','');$('heat').textContent='';
+  draw();if(!DEMO)$('in').focus();
+}
+function say(t,c){var m=$('msg');m.textContent=t;m.className='msg '+(c||'')}
+function draw(){
+  var L=LEVELS[lvl],d=$('dots');d.textContent='';
+  for(var i=0;i<L.tries;i++)d.appendChild(el('div','dot'+(i<L.tries-left?' used':'')));
+  $('tries').textContent='Tries left: '+left;
+  var b=getBest();$('best').textContent=b?'Best: '+b+' tries':'Best: -';
+  var h=$('hist');h.textContent='';
+  hist.forEach(function(x){h.appendChild(el('span','chip '+x.c,String(x.v)))});
+}
+function heat(diff,max){
+  var r=diff/max;
+  if(r<=0.03)return 'Burning hot!';if(r<=0.08)return 'Very warm';if(r<=0.2)return 'Warm';if(r<=0.4)return 'Cold';return 'Freezing';
+}
+function guess(){
+  if(over)return;
+  var L=LEVELS[lvl],raw=$('in').value.trim(),v=Math.floor(+raw);
+  if(raw===''||isNaN(v)||v<1||v>L.max){say('Enter a number from 1 to '+L.max,'lose');return}
+  if(hist.some(function(x){return x.v===v})){say('You already tried '+v,'lose');return}
+  left--;
+  if(v===target){
+    hist.push({v:v,c:'ok'});var used=L.tries-left;
+    say('You got it in '+used+(used===1?' try!':' tries!'),'win');$('heat').textContent='The number was '+target;
+    var b=getBest();if(!b||used<b){setBest(used)}
+    end();
+  }else{
+    var hi=v>target;hist.push({v:v,c:hi?'hi':'lo'});
+    say(hi?'Too high':'Too low',hi?'hi':'lo');$('heat').textContent=heat(Math.abs(v-target),L.max);
+    if(left===0){say('Game over. It was '+target,'lose');$('heat').textContent='';end();}
+  }
+  $('in').value='';draw();if(!over&&!DEMO)$('in').focus();
+}
+function end(){over=true;$('in').disabled=true;$('go').disabled=true;$('again').style.display='block'}
+$('go').onclick=guess;
+$('in').addEventListener('keydown',function(e){if(e.key==='Enter')guess()});
+$('again').onclick=start;
+start();
+if(DEMO){$('demo').style.display='block';[50,25,38,45].forEach(function(v){$('in').value=v;guess()})}
+</script>
+</body>
+</html>
