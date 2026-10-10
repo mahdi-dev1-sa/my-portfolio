@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3D Recipes — Mahdi Dev</title>
+<style>
+:root{--bg:#0d0a14;--card:#181226;--line:#2c2342;--txt:#f3eeff;--mut:#a89fc0;--acc:#ff7a45;--acc2:#ffc247;--ok:#3ddc97}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5;overflow-x:hidden}
+.wrap{max-width:1050px;margin:0 auto;padding:0 16px}
+.hero{position:relative;height:360px;overflow:hidden;border-bottom:1px solid var(--line)}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+.ht{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;justify-content:center;pointer-events:none}
+h1{font-size:clamp(34px,7vw,56px);line-height:1.05}h1 span{color:var(--acc)}
+.ht p{color:var(--mut);margin-top:10px;max-width:420px}
+.bar{display:flex;gap:10px;flex-wrap:wrap;margin:22px 0 12px}
+input#q{flex:1;min-width:180px;background:var(--card);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px 14px;font:inherit}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.chip{background:none;border:1px solid var(--line);color:var(--mut);border-radius:999px;padding:6px 14px;font:inherit;font-size:14px;cursor:pointer}
+.chip.on{border-color:var(--acc);color:var(--txt);background:rgba(255,122,69,.15)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px;perspective:900px;padding-bottom:50px}
+.card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;cursor:pointer;transform-style:preserve-3d;transition:transform .15s,border-color .2s;will-change:transform}
+.card:hover{border-color:var(--acc)}
+.em{font-size:54px;transform:translateZ(40px);display:inline-block;filter:drop-shadow(0 8px 10px rgba(0,0,0,.45))}
+.card h3{margin:8px 0 2px;transform:translateZ(20px)}
+.meta{color:var(--mut);font-size:13px}
+.tag{display:inline-block;margin-top:8px;font-size:12px;color:var(--acc2);border:1px solid var(--line);border-radius:999px;padding:1px 10px}
+.fav{position:absolute;top:10px;right:10px;background:none;border:0;font-size:22px;cursor:pointer;color:var(--mut);transform:translateZ(30px)}
+.fav.on{color:#ff4d6d}
+.empty{color:var(--mut);padding:30px 0;grid-column:1/-1;text-align:center}
+.ov{position:fixed;inset:0;background:rgba(5,3,10,.8);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
+.ov.show{display:flex}
+.modal{background:var(--card);border:1px solid var(--line);border-radius:18px;max-width:560px;width:100%;max-height:88vh;overflow:auto;padding:22px;position:relative}
+.x{position:absolute;top:10px;right:14px;background:none;border:0;color:var(--mut);font-size:26px;cursor:pointer}
+.modal h2{margin-bottom:2px}
+.sv{display:flex;align-items:center;gap:10px;margin:14px 0}
+.sv button{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:none;color:var(--txt);font-size:18px;cursor:pointer}
+.modal h4{margin:14px 0 6px;color:var(--acc2)}
+.modal li{margin:0 0 5px 20px}
+footer{color:var(--mut);font-size:13px;text-align:center;padding:0 16px 30px}
+</style>
+</head>
+<body>
+<div class="hero"><canvas id="cv"></canvas><div class="wrap ht"><h1>3D <span>Recipes</span></h1><p>Simple home recipes. Search, filter, scale servings and save your favorites.</p></div></div>
+<div class="wrap">
+<div class="bar"><input id="q" placeholder="Search recipes or ingredients"></div>
+<div class="chips" id="chips"></div>
+<div class="grid" id="grid"></div>
+</div>
+<div class="ov" id="ov"><div class="modal" id="md"></div></div>
+<footer>Built by Mahdi Dev. Favorites are saved in your browser only.</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+function $(i){return document.getElementById(i)}
+function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
+var R=[
+{id:1,n:'Chakchouka',e:'🍳',c:'Breakfast',t:30,s:3,i:[[2,'tbsp','olive oil'],[1,'','onion, sliced'],[2,'','bell peppers, sliced'],[3,'','garlic cloves, minced'],[4,'','ripe tomatoes, chopped'],[1,'tsp','paprika'],[0.5,'tsp','cumin'],[1,'tsp','salt'],[4,'','eggs']],st:['Heat the oil in a wide pan and cook the onion and peppers for 8 minutes.','Add the garlic, paprika and cumin and stir for 1 minute.','Add the tomatoes and salt. Simmer for 10 minutes until thick.','Make small wells in the sauce and crack in the eggs.','Cover and cook for 5 minutes, until the whites are set. Serve hot with bread.']},
+{id:2,n:'Lentil Soup',e:'🍲',c:'Soup',t:40,s:4,i:[[1,'cup','red lentils, rinsed'],[1,'','onion, chopped'],[1,'','carrot, diced'],[2,'','garlic cloves'],[2,'tbsp','olive oil'],[1,'tsp','cumin'],[4,'cup','water'],[1,'tsp','salt'],[1,'tbsp','lemon juice']],st:['Cook the onion, carrot and garlic in the oil for 5 minutes.','Add the cumin, lentils, water and salt.','Bring to a boil, then simmer for 25 minutes until the lentils are soft.','Blend the soup until smooth, or leave it chunky.','Stir in the lemon juice and serve.']},
+{id:3,n:'Fluffy Pancakes',e:'🥞',c:'Breakfast',t:20,s:4,i:[[1.5,'cup','flour'],[1,'tbsp','baking powder'],[2,'tbsp','sugar'],[0.25,'tsp','salt'],[1.25,'cup','milk'],[1,'','egg'],[3,'tbsp','melted butter']],st:['Mix the flour, baking powder, sugar and salt in a bowl.','Whisk the milk, egg and melted butter in another bowl.','Pour the wet mix into the dry mix and stir until just combined. Some lumps are fine.','Heat a lightly oiled pan on medium heat.','Pour about a quarter cup of batter per pancake. Flip when bubbles appear, and cook until golden.']},
+{id:4,n:'Tomato Pasta',e:'🍝',c:'Dinner',t:20,s:2,i:[[200,'g','pasta'],[2,'tbsp','olive oil'],[2,'','garlic cloves, sliced'],[400,'g','canned tomatoes'],[0.5,'tsp','salt'],[0,'','a few basil leaves']],st:['Boil the pasta in salted water until al dente.','Warm the oil and cook the garlic for 1 minute without browning it.','Add the tomatoes and salt and simmer for 10 minutes.','Drain the pasta and toss it in the sauce.','Top with basil and serve.']},
+{id:5,n:'Chicken and Rice',e:'🍗',c:'Dinner',t:45,s:4,i:[[600,'g','chicken thighs'],[1.5,'cup','rice, rinsed'],[1,'','onion, chopped'],[3,'cup','water'],[2,'tbsp','oil'],[1.5,'tsp','salt'],[1,'tsp','paprika'],[0.5,'tsp','turmeric']],st:['Season the chicken with salt, paprika and turmeric.','Brown the chicken in the oil for 4 minutes per side, then set it aside.','Cook the onion in the same pot for 5 minutes.','Add the rice and water, put the chicken on top and bring to a boil.','Cover and cook on low heat for 20 minutes. Rest for 5 minutes before serving.']},
+{id:6,n:'Tuna Salad',e:'🥗',c:'Lunch',t:10,s:2,i:[[1,'','can of tuna, drained'],[2,'','tomatoes, diced'],[1,'','cucumber, diced'],[0.5,'','onion, thinly sliced'],[2,'tbsp','olive oil'],[1,'tbsp','lemon juice'],[0.25,'tsp','salt'],[0,'','a handful of olives']],st:['Put the tomatoes, cucumber and onion in a bowl.','Add the tuna and olives.','Whisk the oil, lemon juice and salt, then pour over the salad.','Toss gently and serve cold.']},
+{id:7,n:'Vegetable Couscous',e:'🥘',c:'Dinner',t:50,s:4,i:[[2,'cup','couscous'],[2,'cup','hot water'],[2,'tbsp','olive oil'],[1,'tsp','salt'],[1,'','onion, chopped'],[2,'','carrots, chunks'],[2,'','zucchini, chunks'],[1,'','can of chickpeas'],[1,'tbsp','tomato paste'],[4,'cup','water for the vegetables']],st:['Cook the onion in 1 tbsp oil for 5 minutes, then add the tomato paste.','Add the carrots, chickpeas and 4 cups of water. Simmer for 15 minutes.','Add the zucchini and cook for 10 more minutes.','Put the couscous in a bowl with the salt and the remaining oil. Pour over the hot water, cover for 5 minutes, then fluff with a fork.','Serve the couscous topped with the vegetables and some of the broth.']},
+{id:8,n:'Banana Oat Cookies',e:'🍪',c:'Dessert',t:25,s:6,i:[[2,'','ripe bananas'],[1,'cup','rolled oats'],[0.5,'tsp','cinnamon'],[0.25,'cup','raisins or chocolate chips']],st:['Heat the oven to 175 C (350 F).','Mash the bananas in a bowl.','Stir in the oats, cinnamon and raisins.','Drop spoonfuls onto a lined tray.','Bake for 12 to 15 minutes until golden. Let them cool on the tray.']}
+];
+var cat='All',query='',onlyFav=false,favs=[];
+try{favs=JSON.parse(localStorage.getItem('recipes-fav')||'[]')}catch(e){}
+function saveFav(){try{localStorage.setItem('recipes-fav',JSON.stringify(favs))}catch(e){}}
+function chips(){
+  var box=$('chips');box.textContent='';
+  var cs=['All'].concat(R.map(function(r){return r.c}).filter(function(v,i,a){return a.indexOf(v)===i}));
+  cs.forEach(function(c){var b=el('button','chip'+(!onlyFav&&cat===c?' on':''),c);b.onclick=function(){cat=c;onlyFav=false;chips();render()};box.appendChild(b)});
+  var f=el('button','chip'+(onlyFav?' on':''),'♥ Favorites ('+favs.length+')');f.onclick=function(){onlyFav=!onlyFav;chips();render()};box.appendChild(f);
+}
+function render(){
+  var g=$('grid');g.textContent='';var q=query.toLowerCase();
+  var list=R.filter(function(r){
+    if(onlyFav&&favs.indexOf(r.id)<0)return false;
+    if(!onlyFav&&cat!=='All'&&r.c!==cat)return false;
+    if(!q)return true;
+    return (r.n+' '+r.i.map(function(x){return x[2]}).join(' ')).toLowerCase().indexOf(q)>-1;
+  });
+  if(!list.length){g.appendChild(el('div','empty',onlyFav&&!favs.length?'No favorites yet. Tap the heart on a recipe.':'No recipes found.'));return}
+  list.forEach(function(r){
+    var c=el('div','card');
+    c.appendChild(el('div','em',r.e));c.appendChild(el('h3','',r.n));
+    c.appendChild(el('div','meta',r.t+' min · serves '+r.s));c.appendChild(el('span','tag',r.c));
+    var h=el('button','fav'+(favs.indexOf(r.id)>-1?' on':''),'♥');h.title='Favorite';
+    h.onclick=function(e){e.stopPropagation();var i=favs.indexOf(r.id);if(i>-1)favs.splice(i,1);else favs.push(r.id);saveFav();chips();render()};
+    c.appendChild(h);c.onclick=function(){openR(r)};
+    c.addEventListener('mousemove',function(e){var b=c.getBoundingClientRect(),x=(e.clientX-b.left)/b.width-.5,y=(e.clientY-b.top)/b.height-.5;c.style.transform='rotateY('+x*14+'deg) rotateX('+(-y*14)+'deg)'});
+    c.addEventListener('mouseleave',function(){c.style.transform=''});
+    g.appendChild(c);
+  });
+}
+function fmt(v,u){
+  if(u==='g')return String(Math.round(v/5)*5);
+  if(!u)return String(Math.max(1,Math.round(v)));
+  var w=Math.floor(v+1e-6),f=v-w,fr='';
+  var T=[[0,''],[.25,'1/4'],[1/3,'1/3'],[.5,'1/2'],[2/3,'2/3'],[.75,'3/4'],[1,'']],b=T[0];
+  T.forEach(function(t){if(Math.abs(f-t[0])<Math.abs(f-b[0]))b=t});
+  if(b[0]===1){w+=1}else fr=b[1];
+  if(!w&&!fr)return '1/4';
+  return (w?w:'')+(w&&fr?' ':'')+fr;
+}
+function openR(r){
+  var sv=r.s,m=$('md');
+  function draw(){
+    m.textContent='';
+    var x=el('button','x','×');x.onclick=close;m.appendChild(x);
+    m.appendChild(el('h2','',r.e+' '+r.n));m.appendChild(el('div','meta',r.t+' min · '+r.c));
+    var s=el('div','sv');var mi=el('button','','−'),pl=el('button','','+');
+    mi.onclick=function(){if(sv>1){sv--;draw()}};pl.onclick=function(){if(sv<12){sv++;draw()}};
+    s.appendChild(el('span','','Servings:'));s.appendChild(mi);s.appendChild(el('b','',String(sv)));s.appendChild(pl);m.appendChild(s);
+    m.appendChild(el('h4','','Ingredients'));var ul=el('ul');
+    r.i.forEach(function(i){var q=i[0]?fmt(i[0]*sv/r.s,i[1])+(i[1]?' '+i[1]:'')+' ':'';ul.appendChild(el('li','',q+i[2]))});
+    m.appendChild(ul);m.appendChild(el('h4','','Steps'));var ol=el('ol');
+    r.st.forEach(function(t){ol.appendChild(el('li','',t))});m.appendChild(ol);
+  }
+  draw();$('ov').classList.add('show');
+}
+function close(){$('ov').classList.remove('show')}
+$('ov').onclick=function(e){if(e.target===this)close()};
+document.addEventListener('keydown',function(e){if(e.key==='Escape')close()});
+$('q').oninput=function(){query=this.value.trim();render()};
+chips();render();
+
+(function(){
+  var cv=$('cv');
+  if(!window.THREE){return}
+  var ren;try{ren=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true})}catch(e){return}
+  ren.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  var sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera(45,1,.1,100);cam.position.set(0,0,9);
+  sc.add(new THREE.AmbientLight(0xffffff,.55));
+  var dl=new THREE.DirectionalLight(0xffffff,.9);dl.position.set(4,6,6);sc.add(dl);
+  var pl=new THREE.PointLight(0xff7a45,1.1,30);pl.position.set(-5,-2,4);sc.add(pl);
+  var g=new THREE.Group();sc.add(g);
+  function mk(geo,col,x,y,z,s){var m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:col,roughness:.45,metalness:.1}));m.position.set(x,y,z);m.scale.setScalar(s||1);g.add(m);return m}
+  var parts=[
+    mk(new THREE.TorusGeometry(1.5,.38,24,60),0xffc247,0,0,0,1),
+    mk(new THREE.SphereGeometry(.7,32,32),0xe63946,2.9,.8,-.5),
+    mk(new THREE.ConeGeometry(.4,1.6,24),0xff7a45,-3,.4,.2),
+    mk(new THREE.IcosahedronGeometry(.6,0),0x3ddc97,-1.6,-1.6,.6),
+    mk(new THREE.SphereGeometry(.5,24,24),0xf1faee,1.8,-1.5,.8),
+    mk(new THREE.CylinderGeometry(.35,.35,.9,24),0x8d5524,4.2,-.9,-1)
+  ];
+  var mx=0,my=0;
+  window.addEventListener('mousemove',function(e){mx=e.clientX/innerWidth-.5;my=e.clientY/innerHeight-.5});
+  function size(){var w=cv.clientWidth,h=cv.clientHeight;ren.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();g.position.x=w<700?1.6:2.2;g.scale.setScalar(w<700?.6:1)}
+  size();addEventListener('resize',size);
+  var vis=true;if('IntersectionObserver' in window)new IntersectionObserver(function(e){vis=e[0].isIntersecting}).observe(cv);
+  var t0=performance.now();
+  function frame(){
+    requestAnimationFrame(frame);if(!vis)return;
+    var t=(performance.now()-t0)/1000;
+    parts.forEach(function(p,i){p.rotation.x=t*.4+i;p.rotation.y=t*.6+i*.5;if(i>0)p.position.y+=Math.sin(t*1.2+i)*.003});
+    g.rotation.y+=(mx*.8-g.rotation.y)*.05;g.rotation.x+=(my*.5-g.rotation.x)*.05;
+    ren.render(sc,cam);
+  }
+  frame();
+})();
+</script>
+</body>
+</html>
